@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warframe Codex - v6.2</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- 1. VARIABLES --- */
+        :root {
+            --bg-deep: #0a0a0c; --bg-card: #151515; --text-main: #eeeeee; --text-dim: #888;
+            --common: #a89686; --uncommon: #c0c0c0; --rare: #d4af37; --legendary: #b0c9ec; --arcane: #00ffcc;
+            --syndicate: #ff9f43; --special: #a29bfe; --mission: #48dbfb; --enemy: #ff6b6b;
+            --active-blue: #4da6ff; --glass-nav: rgba(15, 15, 20, 0.95); --border-glass: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background: radial-gradient(circle at 50% 0%, #1a1c24 0%, #000000 100%);
+            margin: 0; font-family: 'Roboto Condensed', sans-serif; color: var(--text-main);
+            display: flex; flex-direction: column; align-items: center;
+            height: 100vh; overflow: hidden; user-select: none;
+        }
+
+        /* --- NAVIGATION --- */
+        .header-group { width: 100%; flex-shrink: 0; z-index: 100; background: var(--glass-nav); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-glass); box-shadow: 0 4px 30px rgba(0,0,0,0.8); }
+        .nav-bar { display: flex; gap: 5px; height: 50px; align-items: center; overflow-x: auto; padding: 0 20px; justify-content: center; scrollbar-width: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .nav-item { background: transparent; border: none; cursor: pointer; color: var(--text-dim); height: 100%; padding: 0 15px; position: relative; font-family: inherit; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; transition: 0.2s; }
+        .nav-item:hover { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        .nav-item.active { color: var(--rare); }
+        .nav-item.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--rare); box-shadow: 0 -2px 10px var(--rare); }
+        .progress-line-container { width: 100%; height: 3px; background: #222; }
+        .progress-line-fill { height: 100%; background: var(--rare); width: 0%; transition: 0.5s; box-shadow: 0 0 10px rgba(212, 175, 55, 0.6); }
+
+        /* --- CONTROLS --- */
+        .stats-bar { width: 100%; max-width: 1800px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 10px 30px; box-sizing: border-box; flex-wrap: wrap; gap: 10px; }
+        .controls-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        
+        .search-box { position: relative; }
+        .search-input { background: rgba(0,0,0,0.5); border: 1px solid #444; color: #fff; padding: 6px 10px 6px 30px; border-radius: 4px; font-family: inherit; font-size: 14px; width: 160px; transition: 0.2s; }
+        .search-input:focus { outline: none; border-color: var(--rare); background: #000; width: 200px; }
+        .search-icon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 14px; fill: #666; }
+
+        .sort-select { background: rgba(0,0,0,0.5); border: 1px solid #444; color: #ccc; padding: 6px 10px; border-radius: 4px; font-family: inherit; font-size: 12px; font-weight: bold; text-transform: uppercase; cursor: pointer; outline: none; }
+        .sort-select:hover { border-color: var(--rare); color: #fff; }
+
+        .filter-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; font-size: 12px; color: #ccc; transition: 0.2s; }
+        .filter-toggle:hover { color: #fff; }
+        .filter-toggle input { display: none; }
+        .toggle-box { width: 16px; height: 16px; border: 1px solid #666; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; border-radius: 3px; }
+        .filter-toggle input:checked + .toggle-box { background: var(--rare); border-color: var(--rare); }
+        .filter-toggle input:checked + .toggle-box::after { content: '✔'; font-size: 12px; color: #000; }
+
+        .btn-action { background: rgba(30,30,30,0.8); border: 1px solid #444; color: #ccc; padding: 6px 12px; font-size: 11px; cursor: pointer; text-transform: uppercase; font-weight: bold; border-radius: 3px; transition: 0.2s; }
+        .btn-action:hover { border-color: var(--rare); color: var(--rare); background: rgba(50,50,50,0.9); }
+
+        .legend-box { display: flex; gap: 15px; margin-left: 10px; font-size: 11px; font-weight: bold; text-transform: uppercase; color: #666; border-left: 1px solid #444; padding-left: 15px; height: 30px; align-items: center; }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .dot-leg { width: 8px; height: 8px; border-radius: 2px; }
+
+        .stats-counter { text-align: right; white-space: nowrap; font-size: 14px; }
+        .stats-pct { color: var(--rare); font-weight: bold; margin-left: 5px; }
+
+        /* --- GALLERY --- */
+        .gallery-container { flex-grow: 1; width: 100%; overflow-y: auto; padding: 20px; display: flex; justify-content: center; position: relative; scroll-behavior: smooth; }
+        .card-gallery { display: flex; flex-wrap: wrap; justify-content: center; gap: 25px; max-width: 1750px; padding-bottom: 80px; }
+        .gallery-container::-webkit-scrollbar { width: 8px; }
+        .gallery-container::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+
+        /* SKELETON */
+        .skeleton-card { width: 240px; height: 340px; background: #151515; border: 1px solid #333; border-radius: 6px; position: relative; overflow: hidden; }
+        .skeleton-card::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent); animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        .sk-img { width: 100%; height: 50%; background: #222; }
+        .sk-title { width: 60%; height: 20px; background: #222; margin: 15px auto; border-radius: 4px; }
+        .sk-text { width: 80%; height: 10px; background: #222; margin: 10px auto; border-radius: 4px; }
+
+        /* --- CARD FRONT DESIGN --- */
+        .card-wrapper { width: 240px; height: 340px; perspective: 1000px; opacity: 0; animation: fadeIn 0.4s forwards; cursor: default; will-change: transform; }
+        @keyframes fadeIn { to { opacity: 1; } }
+        .card-inner { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform-style: preserve-3d; }
+        .card-wrapper.flipped .card-inner { transform: rotateY(180deg); }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 6px; overflow: hidden; background-color: #151515; border: 1px solid #444; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.5); box-sizing: border-box; }
+
+        .card-wrapper[data-rarity="Common"] .card-front { border-color: var(--common); }
+        .card-wrapper[data-rarity="Uncommon"] .card-front { border-color: var(--uncommon); }
+        .card-wrapper[data-rarity="Rare"] .card-front { border-color: var(--rare); }
+        .card-wrapper[data-rarity="Legendary"] .card-front { border-color: var(--legendary); }
+        .card-wrapper[data-rarity="Arcane"] .card-front { border-color: var(--arcane); }
+
+        .owned-check { position: absolute; top: 0; left: 0; background: rgba(0,0,0,0.9); color: #666; width: 40px; height: 35px; font-size: 18px; z-index: 50; cursor: pointer; border-bottom-right-radius: 12px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #444; border-right: 1px solid #444; transition: 0.2s; }
+        .owned-check:hover { background: #333; color: #fff; }
+        .card-wrapper.owned .owned-check { background: var(--rare); color: #000; border-color: var(--rare); }
+        .card-wrapper.owned .card-image-img { filter: grayscale(100%) brightness(0.5); }
+        .drain-box { position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.9); color: #fff; padding: 5px 12px; font-weight: bold; font-size: 16px; z-index: 20; border-bottom-left-radius: 15px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid #444; border-left: 1px solid #444; }
+        .polarity-icon { width: 18px; height: 18px; filter: invert(1); }
+        .card-image-container { width: 100%; height: 50%; background-color: #000; cursor: pointer; position: relative; }
+        .card-image-img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+        .img-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #222 0%, #000 100%); color: #555; font-weight: 900; font-size: 20px; text-transform: uppercase; padding: 10px; }
+        
+        .info-area { flex-grow: 1; background: #151515; display: flex; flex-direction: column; align-items: center; padding: 10px; position: relative; z-index: 5; cursor: pointer; justify-content: flex-start; }
+        .type-pill { background: #000; border: 1px solid #444; border-radius: 12px; padding: 3px 12px; font-size: 10px; font-weight: bold; color: #bbb; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; box-shadow: 0 2px 5px #000; }
+        .mod-name { font-size: 15px; font-weight: bold; text-transform: uppercase; color: #fff; margin-bottom: 6px; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mod-desc { font-size: 11px; color: #ccc; text-align: center; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; width: 100%; flex-grow: 1; }
+        
+        .rank-controls-container { display: flex; width: 100%; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid #222; margin-top: auto; }
+        .rank-btn { background: #222; border: 1px solid #444; color: #fff; font-weight: bold; cursor: pointer; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: 0.2s; }
+        .rank-btn:hover { border-color: var(--active-blue); color: var(--active-blue); }
+        .ranks { display: flex; justify-content: center; align-items: center; gap: 3px; flex-grow: 1; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #333; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); transition: 0.2s; }
+        .dot.active { background: var(--active-blue); box-shadow: 0 0 6px var(--active-blue); }
+
+        /* BACK SIDE */
+        .card-back { 
+            background: #121212; background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 20px 20px;
+            transform: rotateY(180deg); padding: 0; cursor: pointer; text-align: left; position: relative; 
+        }
+        .card-wrapper[data-rarity="Common"] .card-back { border-color: var(--common); }
+        .card-wrapper[data-rarity="Uncommon"] .card-back { border-color: var(--uncommon); }
+        .card-wrapper[data-rarity="Rare"] .card-back { border-color: var(--rare); }
+        .card-wrapper[data-rarity="Legendary"] .card-back { border-color: var(--legendary); }
+        .card-wrapper[data-rarity="Arcane"] .card-back { border-color: var(--arcane); }
+
+        .back-header-group { padding: 12px; border-bottom: 1px solid #333; background: rgba(0,0,0,0.6); display: flex; justify-content: space-between; align-items: center; }
+        .back-title { color: #fff; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .tradable-badge { font-size: 9px; background: rgba(0, 100, 0, 0.4); border: 1px solid #2ecc71; color: #2ecc71; padding: 2px 6px; border-radius: 3px; font-weight: bold; text-transform: uppercase; }
+        
+        .source-content { flex-grow: 1; overflow-y: auto; font-size: 11px; color: #ccc; padding: 10px 12px; padding-bottom: 50px; }
+        .source-content::-webkit-scrollbar { width: 4px; }
+        .source-content::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+        .drop-row { display: flex; flex-direction: column; border-bottom: 1px solid #222; padding: 8px 0; position: relative; }
+        .drop-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+        .drop-icon { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+        .drop-row.mission .drop-icon { background: var(--mission); box-shadow: 0 0 5px var(--mission); }
+        .drop-row.enemy .drop-icon { background: var(--enemy); box-shadow: 0 0 5px var(--enemy); }
+        .drop-loc { font-weight: bold; color: #ddd; font-size: 11px; line-height: 1.2; width: 75%; }
+        .drop-pct-text { font-family: monospace; color: #aaa; font-size: 10px; text-align: right; width: 25%; }
+        .chance-bar-bg { width: 100%; height: 3px; background: #222; border-radius: 2px; overflow: hidden; margin-top: 2px; }
+        .chance-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+        .drop-row.mission .chance-bar-fill { background: var(--mission); }
+        .drop-row.enemy .chance-bar-fill { background: var(--enemy); }
+        .rot-tag { font-size: 9px; border: 1px solid #444; color: #888; padding: 0px 3px; border-radius: 2px; margin-right: 4px; font-weight: bold; display: inline-block; }
+
+        .acquisition-box { border: 1px solid #333; background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%); padding: 10px; margin-bottom: 8px; border-radius: 4px; position: relative; overflow: hidden; }
+        .acquisition-box::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; }
+        .acquisition-box.syndicate::before { background: var(--syndicate); box-shadow: 0 0 8px var(--syndicate); }
+        .acquisition-box.syndicate .acq-title { color: var(--syndicate); }
+        .acquisition-box.special::before { background: var(--special); box-shadow: 0 0 8px var(--special); }
+        .acquisition-box.special .acq-title { color: var(--special); }
+        .acq-title { font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; display: block; letter-spacing: 0.5px; }
+        .acq-detail { font-size: 11px; color: #ccc; margin-bottom: 2px; display: flex; justify-content: space-between; }
+        .acq-price { font-weight: bold; color: #fff; font-family: monospace; }
+
+        .back-footer { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(10,10,10,0.95); border-top: 1px solid #333; padding: 10px; box-sizing: border-box; }
+        .wiki-btn { background: #1a1a1a; border: 1px solid #444; color: #eee; padding: 8px 0; font-size: 12px; text-align: center; justify-content: center; border-radius: 4px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: 0.2s; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; width: 100%; }
+        .wiki-btn:hover { background: #252525; border-color: var(--rare); color: var(--rare); }
+
+        #scroll-top { position: fixed; bottom: 20px; right: 20px; width: 40px; height: 40px; background: var(--rare); color: #000; border-radius: 50%; display: none; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; cursor: pointer; z-index: 200; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: 0.2s; }
+        #scroll-top:hover { transform: translateY(-5px); }
+        #loading-indicator { display: none; align-items: center; gap: 10px; font-size: 12px; color: var(--rare); }
+        .hidden-file-input { display: none; }
+
+        @media (max-width: 600px) {
+            .nav-bar { justify-content: flex-start; }
+            .stats-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .controls-left { flex-wrap: wrap; }
+            .card-wrapper { width: 100%; max-width: 240px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-group">
+        <div class="nav-container">
+            <div class="nav-bar">
+                <button class="nav-item active" onclick="applyFilter('all', this)">All</button>
+                <button class="nav-item" onclick="applyFilter('warframe', this)">Warframe</button>
+                <button class="nav-item" onclick="applyFilter('aura', this)">Aura</button>
+                <button class="nav-item" onclick="applyFilter('augment', this)">Augment</button>
+                <button class="nav-item" onclick="applyFilter('tome', this)">Tome</button>
+                <button class="nav-item" onclick="applyFilter('arcane', this)">Arcane</button>
+                <button class="nav-item" onclick="applyFilter('primary', this)">Primary</button>
+                <button class="nav-item" onclick="applyFilter('secondary', this)">Secondary</button>
+                <button class="nav-item" onclick="applyFilter('melee', this)">Melee</button>
+                <button class="nav-item" onclick="applyFilter('exilus', this)">Exilus</button>
+                <button class="nav-item" onclick="applyFilter('companion', this)">Companion</button>
+                <button class="nav-item" onclick="applyFilter('archwing', this)">Archwing</button>
+            </div>
+            <div class="progress-line-container"><div class="progress-line-fill" id="progress-fill"></div></div>
+        </div>
+
+        <div class="stats-bar">
+            <div class="controls-left">
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" class="search-input" placeholder="SEARCH..." onkeyup="debouncedSearch(event)">
+                </div>
+                
+                <select class="sort-select" onchange="changeSort(this.value)">
+                    <option value="name">Sort: A-Z</option>
+                    <option value="rarity">Sort: Rarity</option>
+                    <option value="drain">Sort: Cost</option>
+                    <option value="chance">Sort: % Drop</option>
+                </select>
+
+                <label class="filter-toggle">
+                    <input type="checkbox" id="show-missing-only" onchange="toggleMissingFilter()">
+                    <div class="toggle-box"></div> Missing
+                </label>
+                
+                <div style="width:1px; height:20px; background:#444;"></div>
+                
+                <button class="btn-action" onclick="exportDataJSON()">Backup</button>
+                <input type="file" id="json-file-input" accept=".json" onchange="importDataJSON(event)" class="hidden-file-input">
+                <button class="btn-action" onclick="document.getElementById('json-file-input').click()">Restore</button>
+                
+                <input type="file" id="aleca-file-input" accept=".json,.txt" onchange="importAlecaFile(event)" class="hidden-file-input">
+                <button class="btn-action btn-aleca" onclick="document.getElementById('aleca-file-input').click()">📂 Import Aleca/JSON</button>
+                
+                <button class="btn-action btn-reset" style="color:#a55; border-color:#522;" onclick="resetData()">Reset</button>
+            </div>
+            <div class="stats-counter">
+                <span id="count-found" style="color:#fff; font-weight:bold;">0</span> / <span id="count-total" style="color:#666;">0</span>
+                <span id="pct-display" class="stats-pct">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="gallery-container" id="scroll-container">
+        <div class="card-gallery" id="gallery-root">
+            </div>
+    </div>
+
+    <div id="scroll-top" onclick="scrollToTop()">↑</div>
+
+    <script>
+        let rawApiData = [];      
+        let filteredList = [];    
+        let renderedCount = 0;    
+        const BATCH_SIZE = 60;    
+        let showMissingOnly = false;
+        let currentCategory = 'all'; 
+        let currentSearchTerm = '';
+        let currentSort = 'name';
+
+        const STORAGE_KEY = 'warframe_codex_v6.2_wiki_fix';
+        let savedData = localStorage.getItem(STORAGE_KEY);
+        let ownedCards = savedData ? new Set(JSON.parse(savedData)) : new Set();
+        const ICON_BASE_PATH = "assets/Border/Additional/";
+        const levelStatsCache = new Map();
+        const nameToIdMap = new Map();
+
+        // Render Skeletons for first load
+        function renderSkeletons() {
+            const gallery = document.getElementById('gallery-root');
+            let html = '';
+            for(let i=0; i<12; i++) {
+                html += `<div class="skeleton-card"><div class="sk-img"></div><div class="sk-title"></div><div class="sk-text"></div></div>`;
+            }
+            gallery.innerHTML = html;
+        }
+
+        async function fetchWarframeData() {
+            renderSkeletons();
+            try {
+                const [modsRes, arcanesRes] = await Promise.all([
+                    fetch('https://unpkg.com/warframe-items/data/json/Mods.json'),
+                    fetch('https://unpkg.com/warframe-items/data/json/Arcanes.json')
+                ]);
+                if (!modsRes.ok || !arcanesRes.ok) throw new Error("Network error");
+                
+                const modsData = await modsRes.json();
+                const arcanesData = await arcanesRes.json();
+                const combinedData = [...modsData, ...arcanesData];
+                
+                const uniqueMap = new Map();
+                combinedData.forEach(item => {
+                    if (!item.imageName) return;
+                    if (item.name.includes("Riven")) return;
+                    if (item.uniqueName && item.uniqueName.includes("/PVP")) return;
+                    if (item.name.includes("Conclave")) return;
+                    if (item.uniqueName && item.uniqueName.toLowerCase().includes("setmod")) return; 
+                    
+                    if (item.levelStats) levelStatsCache.set(item.uniqueName, item.levelStats);
+                    
+                    // Indexing
+                    const dropLocs = item.drops ? item.drops.map(d => d.location).join(" ") : "";
+                    item.searchString = `${item.name} ${item.type} ${item.category || ""} ${dropLocs}`.toLowerCase();
+
+                    uniqueMap.set(item.name, item);
+                    nameToIdMap.set(item.name.toLowerCase(), item.uniqueName);
+                });
+
+                rawApiData = Array.from(uniqueMap.values());
+                applySort(rawApiData);
+                const activeBtn = document.querySelector('.nav-item.active') || document.querySelector('.nav-item:first-child');
+                applyFilter(currentCategory, activeBtn);
+            } catch (error) {
+                console.error("API Error:", error);
+                document.getElementById('gallery-root').innerHTML = "<div style='color:#a55;'>Failed to load database.</div>";
+            }
+        }
+
+        function changeSort(val) {
+            currentSort = val;
+            applyFilter(currentCategory, null);
+        }
+
+        function applySort(list) {
+            const rarityMap = { 'Common': 1, 'Uncommon': 2, 'Rare': 3, 'Legendary': 4 };
+            list.sort((a, b) => {
+                if (currentSort === 'name') return a.name.localeCompare(b.name);
+                if (currentSort === 'drain') return (b.baseDrain || 0) - (a.baseDrain || 0);
+                if (currentSort === 'rarity') {
+                    const rA = rarityMap[a.rarity] || 0;
+                    const rB = rarityMap[b.rarity] || 0;
+                    if (rA !== rB) return rB - rA;
+                    return a.name.localeCompare(b.name);
+                }
+                if (currentSort === 'chance') {
+                    const getMaxChance = (item) => {
+                        if (!item.drops || item.drops.length === 0) return 0;
+                        return Math.max(...item.drops.map(d => d.chance));
+                    };
+                    const cA = getMaxChance(a);
+                    const cB = getMaxChance(b);
+                    return cA - cB;
+                }
+            });
+        }
+
+        let debounceTimer;
+        function debouncedSearch(event) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                currentSearchTerm = event.target.value.toLowerCase();
+                applyFilter(currentCategory, null);
+            }, 300);
+        }
+
+        function applyFilter(type, btnElement) {
+            currentCategory = type;
+            if(btnElement) {
+                document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+                btnElement.classList.add('active');
+            }
+            const isAll = type === 'all';
+            
+            filteredList = rawApiData.filter(item => {
+                if (currentSearchTerm && !item.searchString.includes(currentSearchTerm)) return false;
+                if (showMissingOnly && ownedCards.has(item.uniqueName)) return false;
+                if (isAll) return true;
+                
+                const t = (item.type || "").toLowerCase();
+                const slot = (item.slot || "").toLowerCase();
+                const category = (item.category || "").toLowerCase();
+                const uniqueId = item.uniqueName || "";
+                const isExilus = item.isExilus;
+                const isAugment = item.isAugment || item.name.includes("Augment");
+                const isAura = t.includes("aura") || slot === "aura" || uniqueId.includes("/Aura/");
+                const isArcane = category.includes("arcane") || t.includes("arcane");
+                const isTome = t.includes("tome") || t.includes("grimoire");
+
+                switch(type) {
+                    case 'warframe': return t.includes("warframe") && !isAura && !isAugment && !t.includes("archwing") && !isArcane;
+                    case 'aura': return isAura;
+                    case 'augment': return isAugment;
+                    case 'tome': return isTome;
+                    case 'arcane': return isArcane;
+                    case 'primary': return (t.includes("rifle") || t.includes("bow") || t.includes("shotgun") || t.includes("sniper")) && !t.includes("archwing") && !isAugment && !isExilus && !isTome;
+                    case 'secondary': return (t.includes("pistol") || t.includes("secondary")) && !t.includes("archwing") && !isAugment && !isExilus && !isTome;
+                    case 'melee': return (t.includes("melee") && !t.includes("stance")) && !t.includes("archwing") && !isAugment && !isExilus;
+                    case 'stance': return t.includes("stance");
+                    case 'exilus': return isExilus || slot === "exilus";
+                    case 'companion': return t.includes("companion") || t.includes("sentinel") || t.includes("beast");
+                    case 'archwing': return t.includes("archwing") || t.includes("arch-gun") || t.includes("arch-melee");
+                    default: return false;
+                }
+            });
+
+            applySort(filteredList);
+            document.getElementById('count-total').innerText = filteredList.length;
+            
+            const gallery = document.getElementById('gallery-root');
+            gallery.innerHTML = '';
+            renderedCount = 0;
+            updateOwnedCounter();
+            document.getElementById('scroll-container').scrollTop = 0;
+            renderNextBatch();
+        }
+
+        function toggleMissingFilter() {
+            const checkbox = document.getElementById('show-missing-only');
+            showMissingOnly = checkbox.checked;
+            applyFilter(currentCategory, null); 
+        }
+
+        function renderNextBatch() {
+            const gallery = document.getElementById('gallery-root');
+            const nextBatch = filteredList.slice(renderedCount, renderedCount + BATCH_SIZE);
+            if (nextBatch.length === 0 && renderedCount === 0) {
+                gallery.innerHTML = '<div style="color:#444; margin-top:50px;">NO ITEMS FOUND</div>';
+                return;
+            }
+            
+            const fragment = document.createDocumentFragment(); 
+            nextBatch.forEach(apiItem => {
+                const mod = formatModData(apiItem);
+                const card = createCardElement(mod);
+                fragment.appendChild(card);
+            });
+            gallery.appendChild(fragment);
+            renderedCount += nextBatch.length;
+        }
+
+        const scrollContainer = document.getElementById('scroll-container');
+        const scrollBtn = document.getElementById('scroll-top');
+        scrollContainer.addEventListener('scroll', () => {
+            if (scrollContainer.scrollTop > 500) scrollBtn.style.display = "flex"; else scrollBtn.style.display = "none";
+            if (scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 400) {
+                renderNextBatch();
+            }
+        });
+        function scrollToTop() { scrollContainer.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+        function getStatAtRank(id, rank, maxRank, descriptionTemplate) {
+            if (levelStatsCache.has(id)) {
+                const statsArr = levelStatsCache.get(id);
+                if (statsArr[rank]) return statsArr[rank].stats.join('<br>');
+                return statsArr[statsArr.length-1].stats.join('<br>');
+            }
+            return descriptionTemplate.replace(/(\d+(\.\d+)?)/g, (match) => {
+                const maxVal = parseFloat(match);
+                const baseVal = maxVal / (maxRank + 1);
+                const currentVal = baseVal * (rank + 1);
+                if (currentVal % 1 === 0) return currentVal.toFixed(0);
+                return currentVal.toFixed(1).replace(/\.0$/, '');
+            });
+        }
+
+        function formatModData(apiItem) {
+            let displayType = "MOD";
+            const t = (apiItem.type || "").toLowerCase();
+            const slot = (apiItem.slot || "").toLowerCase();
+            const category = (apiItem.category || "").toLowerCase();
+            const uniqueId = apiItem.uniqueName || "";
+            const isExilus = apiItem.isExilus;
+            const isAura = t.includes("aura") || slot === "aura" || uniqueId.includes("/Aura/");
+            if (category.includes("arcane")) displayType = "ARCANE";
+            else if (t.includes("tome")) displayType = "TOME";
+            else if (isAura) displayType = "AURA";
+            else if (t.includes("stance")) displayType = "STANCE";
+            else if (isExilus) displayType = "EXILUS";
+            else if (t.includes("warframe")) displayType = "WARFRAME";
+            else if (t.includes("rifle") || t.includes("bow")) displayType = "PRIMARY";
+            else if (t.includes("pistol")) displayType = "SECONDARY";
+            else if (t.includes("melee")) displayType = "MELEE";
+            else displayType = t.split(' ')[0].toUpperCase();
+
+            let initialDesc = "Effect unknown";
+            if (apiItem.levelStats || apiItem.description) {
+                if (apiItem.levelStats) initialDesc = apiItem.levelStats[0].stats.join('<br>');
+                else {
+                    initialDesc = apiItem.description.replace(/(\r\n|\n|\r)/gm, "<br>");
+                    initialDesc = getStatAtRank(apiItem.uniqueName, 0, apiItem.fusionLimit || 5, initialDesc);
+                }
+            }
+
+            const imageNameEncoded = encodeURIComponent(apiItem.imageName); 
+            const imgUrl = `https://cdn.warframestat.us/img/${imageNameEncoded}`;
+            let rarity = apiItem.rarity || "Common";
+            if (displayType === "ARCANE" && rarity === "Common") rarity = "Arcane";
+            let polarityIconName = null;
+            if (apiItem.polarity) {
+                const pol = apiItem.polarity.toLowerCase();
+                polarityIconName = pol.charAt(0).toUpperCase() + pol.slice(1) + ".svg";
+            }
+
+            return {
+                id: apiItem.uniqueName,
+                name: apiItem.name,
+                description: initialDesc,
+                rawDescription: apiItem.description ? apiItem.description.replace(/(\r\n|\n|\r)/gm, "<br>") : "",
+                baseDrain: apiItem.baseDrain || 0,
+                rarity: rarity,
+                type: displayType,
+                art: imgUrl,
+                drops: apiItem.drops || [],
+                maxRank: apiItem.fusionLimit || 5,
+                polarityIcon: polarityIconName ? ICON_BASE_PATH + polarityIconName : null,
+                tradable: apiItem.tradable !== false // Most items are tradable unless specified
+            };
+        }
+
+        function createCardElement(mod) {
+            const isOwned = ownedCards.has(mod.id);
+            const wrapper = document.createElement('div');
+            wrapper.className = `card-wrapper ${isOwned ? 'owned' : ''}`;
+            wrapper.setAttribute('data-rarity', mod.rarity); 
+            wrapper.id = `wrapper-${mod.id}`;
+            wrapper.currentRank = 0;
+
+            wrapper.onclick = (e) => {
+                if(e.target.closest('.owned-check') || e.target.closest('.rank-controls-container') || e.target.closest('.wiki-btn')) return;
+                wrapper.classList.toggle('flipped');
+            };
+
+            let dotsHtml = '';
+            for(let i=1; i <= mod.maxRank; i++) {
+                dotsHtml += `<div class="dot" id="dot-${mod.id}-${i}"></div>`;
+            }
+
+            let nameColor = '#fff';
+            if (mod.rarity === 'Rare') nameColor = '#f0e68c';
+            if (mod.rarity === 'Legendary') nameColor = '#b0c9ec';
+            if (mod.type === 'ARCANE') nameColor = '#00ffcc';
+
+            const polarityHtml = mod.polarityIcon ? `<img src="${mod.polarityIcon}" class="polarity-icon" onerror="this.style.display='none'">` : '';
+            const acquisitionHtml = getAcquisitionInfo(mod);
+            const initialDrain = typeof mod.baseDrain === 'number' ? mod.baseDrain : "-";
+            
+            // --- FIX WIKI URL FORMAT ---
+            // Capitalize each word and replace spaces with underscore
+            const wikiName = mod.name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('_');
+            const wikiUrl = `https://warframe.fandom.com/wiki/${wikiName}`;
+
+            const tradeBadge = mod.tradable ? `<div class="tradable-badge">♻ TRADEABLE</div>` : '';
+
+            wrapper.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-front">
+                        <div class="owned-check" onclick="toggleOwned('${mod.id}', this)" title="Mark as Owned">
+                            ${isOwned ? '✔' : '+'}
+                        </div>
+                        <div class="drain-box">
+                            <span id="drain-${mod.id}">${initialDrain}</span> ${polarityHtml}
+                        </div>
+                        <div class="card-image-container">
+                            <img class="card-image-img" src="${mod.art}" loading="lazy" alt="${mod.name}" 
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                            <div class="img-fallback" style="display:none;">${mod.name}</div>
+                        </div>
+                        <div class="info-area">
+                            <div class="type-pill">${mod.type}</div>
+                            <div class="mod-name" style="color: ${nameColor};" title="${mod.name}">${mod.name}</div>
+                            <div class="mod-desc" id="desc-${mod.id}">${mod.description}</div>
+                            
+                            <div class="rank-controls-container" onclick="event.stopPropagation()">
+                                <button class="rank-btn" onclick="updateRank('${mod.id}', -1, ${mod.maxRank}, ${mod.baseDrain}, \`${mod.rawDescription}\`)">-</button>
+                                <div class="ranks">${dotsHtml}</div>
+                                <button class="rank-btn" onclick="updateRank('${mod.id}', 1, ${mod.maxRank}, ${mod.baseDrain}, \`${mod.rawDescription}\`)">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-back">
+                        <div class="back-header-group">
+                            <div>
+                                <div class="back-title">Acquisition</div>
+                                <div class="back-subtitle">Where to find this</div>
+                            </div>
+                            ${tradeBadge}
+                        </div>
+                        <div class="source-content">${acquisitionHtml}</div>
+                        <div class="back-footer">
+                            <a href="${wikiUrl}" target="_blank" class="wiki-btn">
+                                🌍 Open Wiki
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return wrapper;
+        }
+
+        function updateRank(id, change, maxRank, baseDrain, rawDesc) {
+            const wrapper = document.getElementById(`wrapper-${id}`);
+            if(!wrapper) return;
+            let current = wrapper.currentRank || 0;
+            let newRank = current + change;
+            if (newRank < 0) newRank = 0;
+            if (newRank > maxRank) newRank = maxRank;
+            wrapper.currentRank = newRank;
+            for(let i=1; i <= maxRank; i++) {
+                const dot = document.getElementById(`dot-${id}-${i}`);
+                if(dot) {
+                    if (i <= newRank) dot.className = 'dot active';
+                    else dot.className = 'dot';
+                }
+            }
+            const drainEl = document.getElementById(`drain-${id}`);
+            if(drainEl && typeof baseDrain === 'number') {
+                drainEl.innerText = baseDrain + newRank;
+            }
+            const descEl = document.getElementById(`desc-${id}`);
+            if(descEl) {
+                descEl.innerHTML = getStatAtRank(id, newRank, maxRank, rawDesc);
+            }
+        }
+
+        function getAcquisitionInfo(mod) {
+            const vendors = { "Steel Meridian": { cost: "25k Standing", style: "syndicate" }, "Arbiters of Hexis": { cost: "25k Standing", style: "syndicate" }, "Cephalon Suda": { cost: "25k Standing", style: "syndicate" }, "The Perrin Sequence": { cost: "25k Standing", style: "syndicate" }, "Red Veil": { cost: "25k Standing", style: "syndicate" }, "New Loka": { cost: "25k Standing", style: "syndicate" }, "Cephalon Simaris": { cost: "75k Standing", style: "syndicate" }, "Conclave": { cost: "Standing", style: "syndicate" }, "Ostron": { cost: "Standing", style: "syndicate" }, "Solaris United": { cost: "Standing", style: "syndicate" }, "Entrati": { cost: "Standing", style: "syndicate" }, "Holdfasts": { cost: "Standing", style: "syndicate" }, "Cavia": { cost: "Standing", style: "syndicate" }, "Ventkids": { cost: "Standing", style: "syndicate" }, "Necraloid": { cost: "Standing", style: "syndicate" }, "Nightwave": { cost: "Creds", style: "special" }, "Baro Ki'Teer": { cost: "Ducats", style: "special" }, "Teshin": { cost: "Steel Essence", style: "special" } };
+            
+            const getRotation = (drop) => { if(drop.rotation) return drop.rotation; const m = drop.location.match(/Rot(?:ation)?\s*([A-C])/i); return m ? m[1] : null; };
+            const getDropScore = (d) => { if(Object.keys(vendors).some(v => d.location.includes(v))) return 3; if(d.type?.includes("Mission") || d.location.includes("Rot")) return 2; return 1; };
+
+            if (mod.drops && mod.drops.length > 0) {
+                const sorted = mod.drops.sort((a,b) => { const sA = getDropScore(a), sB = getDropScore(b); return sA!==sB ? sB-sA : b.chance - a.chance; }).slice(0,8);
+                const rows = sorted.map(d => {
+                    const vKey = Object.keys(vendors).find(v => d.location.includes(v));
+                    if(vKey) {
+                        const vData = vendors[vKey];
+                        let rank = d.location.includes(',') ? d.location.split(',')[1].trim() : "Offering";
+                        const nClass = vData.style==='special'?'acquisition-box special':'acquisition-box syndicate';
+                        return `
+                            <div class="${nClass}">
+                                <span class="acq-title">${vKey}</span>
+                                <div class="acq-detail"><span>${rank}</span></div>
+                                <div class="acq-detail"><span class="acq-price">${vData.cost}</span></div>
+                            </div>`;
+                    }
+                    const s = getDropScore(d);
+                    const label = s===2 ? `<span class="rot-tag">ROT: ${getRotation(d)||"?"}</span>` : ``;
+                    const typeClass = s===2 ? 'mission' : 'enemy';
+                    const iconStyle = typeClass === 'mission' ? 'background:var(--mission);box-shadow:0 0 5px var(--mission);' : 'background:var(--enemy);box-shadow:0 0 5px var(--enemy);';
+                    let chance = (d.chance*100).toFixed(2);
+                    let barWidth = Math.min(100, Math.max(5, chance * 4)); 
+
+                    return `
+                        <div class="drop-row ${typeClass}">
+                            <div class="drop-header">
+                                <span class="drop-loc"><span class="drop-icon" style="${iconStyle}"></span>${label} ${d.location.replace(/\(Rot\s*[A-C]\)/i,'').trim().replace(/,\s*$/,'')}</span>
+                                <span class="drop-pct-text">${chance}%</span>
+                            </div>
+                            <div class="chance-bar-bg"><div class="chance-bar-fill" style="width:${barWidth}%"></div></div>
+                        </div>
+                    `;
+                }).join('');
+                return rows;
+            }
+
+            const typeUpper = (mod.type || "").toUpperCase();
+            const descUpper = (mod.description || "").toUpperCase();
+            if (typeUpper.includes("PREDASITE") || descUpper.includes("PREDASITE")) return `<div class="acquisition-box syndicate"><span class="acq-title">Companion Precept</span><div class="acq-text">Automatically acquired upon obtaining a <strong>Predasite</strong> (Necralisk).</div></div>`;
+            if (typeUpper.includes("VULPAPHYLA") || descUpper.includes("VULPAPHYLA")) return `<div class="acquisition-box syndicate"><span class="acq-title">Companion Precept</span><div class="acq-text">Automatically acquired upon obtaining a <strong>Vulpaphyla</strong> (Necralisk).</div></div>`;
+            if (typeUpper.includes("MOA") && !mod.drops?.length) return `<div class="acquisition-box syndicate"><span class="acq-title">Companion Precept</span><div class="acq-text">Acquired by assembling a <strong>MOA</strong> (Legs - Fortuna).</div></div>`;
+            if (typeUpper.includes("HOUND") && !mod.drops?.length) return `<div class="acquisition-box syndicate"><span class="acq-title">Companion Precept</span><div class="acq-text">Acquired by vanquishing a <strong>Sister of Parvos</strong>.</div></div>`;
+
+            if (mod.type === 'AUGMENT') return `<div class="acquisition-box syndicate"><span class="acq-title">Syndicate</span><div class="acq-detail">Rank 5 Offering</div><div class="acq-detail"><span class="acq-price">💎 25,000 Standing</span></div></div>`;
+            if (mod.name.startsWith("Primed")) return `<div class="acquisition-box special"><span class="acq-title">Void Trader</span><div class="acq-detail">Baro Ki'Teer (Rotation)</div><div class="acq-detail"><span class="acq-price">🪙 Ducats + Credits</span></div></div>`;
+            if (mod.name.startsWith("Galvanized")) return `<div class="acquisition-box special"><span class="acq-title">Arbitration</span><div class="acq-detail">Arbiters of Hexis (Relay)</div><div class="acq-detail"><span class="acq-price">♦ 20 Vitus Essence</span></div></div>`;
+            if (mod.name.startsWith("Archon")) return `<div class="acquisition-box syndicate"><span class="acq-title">Kahl's Garrison</span><div class="acq-detail">Chipper (Drifter Camp)</div><div class="acq-detail"><span class="acq-price">📦 Stock</span></div></div>`;
+            return `<div style="text-align:center; padding-top:20px; color:#666;">Source Unknown</div>`;
+        }
+
+        // --- ALECA IMPORT LOGIC ---
+        function importAlecaFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    // Try parsing as JSON first
+                    let data = JSON.parse(e.target.result);
+                    let count = 0;
+                    
+                    // Case 1: Array of Strings (Simple list)
+                    if (Array.isArray(data) && typeof data[0] === 'string') {
+                        data.forEach(name => {
+                            let id = nameToIdMap.get(name.toLowerCase());
+                            if (id) { ownedCards.add(id); count++; }
+                        });
+                    }
+                    // Case 2: Array of Objects (WF Market format)
+                    else if (Array.isArray(data) && typeof data[0] === 'object') {
+                        data.forEach(item => {
+                            let name = item.item_name || item.name;
+                            if (name) {
+                                let id = nameToIdMap.get(name.toLowerCase());
+                                if (id) { ownedCards.add(id); count++; }
+                            }
+                        });
+                    }
+                    
+                    saveToStorage();
+                    updateOwnedCounter();
+                    applyFilter(currentCategory, null);
+                    alert(`Imported ${count} mods from Aleca/JSON file!`);
+                } catch (err) {
+                    alert("Invalid File Format. Please upload a valid JSON.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function toggleOwned(id, btnElement) {
+            const wrapper = document.getElementById(`wrapper-${id}`); 
+            if (ownedCards.has(id)) { ownedCards.delete(id); if(wrapper) wrapper.classList.remove('owned'); btnElement.innerHTML = '+'; } 
+            else { ownedCards.add(id); if(wrapper) wrapper.classList.add('owned'); btnElement.innerHTML = '✔'; }
+            saveToStorage(); updateOwnedCounter();
+            if (showMissingOnly && ownedCards.has(id)) if(wrapper) wrapper.style.display = 'none';
+        }
+        function updateOwnedCounter() {
+            const count = ownedCards.size; document.getElementById('count-found').innerText = count;
+            const total = rawApiData.length || 1; 
+            document.getElementById('pct-display').innerText = Math.round((count/total)*100) + "%";
+            document.getElementById('progress-fill').style.width = Math.round((count/total)*100) + "%";
+        }
+        function saveToStorage() { localStorage.setItem(STORAGE_KEY, JSON.stringify([...ownedCards])); }
+        function exportDataJSON() { const a=document.createElement('a'); a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify([...ownedCards])); a.download='warframe_codex.json'; a.click(); }
+        function importDataJSON(e) { const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=function(ev){ try{ownedCards=new Set(JSON.parse(ev.target.result)); saveToStorage(); applyFilter(currentCategory,null); alert("Restored!");}catch(err){alert("Error");}}; r.readAsText(f); e.target.value=''; }
+        function resetData() { if(confirm("Reset?")) { ownedCards.clear(); localStorage.removeItem(STORAGE_KEY); location.reload(); } }
+
+        fetchWarframeData();
+    </script>
+</body>
+</html>
